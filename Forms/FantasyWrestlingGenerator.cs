@@ -125,7 +125,7 @@ namespace FantasyWrestlingGenerator {
             textBoxFightDisplay.Text = string.Empty;
 
             while(fighting) {
-                List<(int roll, Wrestler wrestler)> turnOrder = GetTurnOrder(wrestler1, wrestler2);
+                List<(int roll, Wrestler wrestler)> turnOrder = GetTurnOrder(wrestler1, wrestler2, stamina1, stamina2);
 
                 // Process moves in order
                 foreach(var (roll, wrestler) in turnOrder) {
@@ -145,22 +145,41 @@ namespace FantasyWrestlingGenerator {
             }
         }
 
-        private List<(int roll, Wrestler wrestler)> GetTurnOrder(Wrestler wrestler1, Wrestler wrestler2) {
-            List<(int roll, Wrestler wrester)> turnOrder = [];
+        private List<(int roll, Wrestler wrestler)> GetTurnOrder(Wrestler wrestler1, Wrestler wrestler2, int stamina1, int stamina2) {
+            List<(int roll, Wrestler wrestler)> turnOrder = [];
 
-            int numberMoves = RollRNG(2, 4);
-            textBoxFightDisplay.AppendText($"Rolled {numberMoves} moves for this turn.{Environment.NewLine}");
+            int numberOfMoves = RollRNG(2, 4);
+            textBoxFightDisplay.AppendText($"Rolled {numberOfMoves} moves for this turn.{Environment.NewLine}");
 
             // Each wrestler rolls for each move
-            for(int i = 0; i < numberMoves; i++) {
+            for(int i = 0; i < numberOfMoves; i++) {
                 turnOrder.Add((RollRNG(), wrestler1)); // Roll between 1-100
                 turnOrder.Add((RollRNG(), wrestler2));
             }
 
-            // Sort moves in descending order (highest roll first)
-            turnOrder.Sort((a, b) => b.roll.CompareTo(a.roll));
+            // Sort with custom logic
+            turnOrder.Sort((a, b) => {
+                // First, compare rolls (descending order)
+                int rollComparison = b.roll.CompareTo(a.roll);
+                if(rollComparison != 0)
+                    return rollComparison;
 
-            return [.. turnOrder.Take(numberMoves)];
+                // Second, compare stamina (higher stamina goes first)
+                int staminaComparison = (a.wrestler == wrestler1 ? stamina1 : stamina2)
+                    .CompareTo(b.wrestler == wrestler1 ? stamina1 : stamina2);
+                if(staminaComparison != 0)
+                    return -staminaComparison; // Higher stamina wins
+
+                // Third, compare weight classes (alphabetical order)
+                int weightComparison = string.Compare(b.wrestler.WeightClass, a.wrestler.WeightClass, StringComparison.OrdinalIgnoreCase);
+                if(weightComparison != 0)
+                    return weightComparison;
+
+                // Final fallback: Randomize
+                return RollRNG(0, 1) == 0 ? -1 : 1; // Randomize if still tied
+            });
+
+            return [.. turnOrder.Take(numberOfMoves)];
         }
 
         private static int RollRNG(int min = 1, int max = 100) {
